@@ -186,10 +186,11 @@ static errors ListVisualDump(list_t* list){
     fprintf(list->files.visDump, "digraph G{\n");
 
     fprintf(list->files.visDump, "\trankdir=LR;\n");
+    fprintf(list->files.visDump, "\tbgcolor=\"#f8fff8\";\n");
 
     for (int i = 0; i < list->numElem + 1; i++){
         fprintf(list->files.visDump,
-        "\tnode%0.3d [shape=Mrecord; label = \" { %0.3d | data = %3.0lld | next = %lld | prev = %lld } \"];\n",
+        "\tnode%0.3d [fontname=\"SF Pro\"; shape=Mrecord; style=filled; color=\"#e6f2ff\";label = \" { %0.3d | data = %3.0lld | next = %lld | prev = %lld } \"];\n",
         i, i, list->data[i], list->next[i], list->prev[i]);
     }
 
@@ -197,7 +198,7 @@ static errors ListVisualDump(list_t* list){
 
     for (int i = 0; i < list->numElem; i++){
         fprintf(list->files.visDump,
-        "\tnode%0.3d -> node%0.3d [ weight=1000; color=white; ];\n",
+        "\tnode%0.3d -> node%0.3d [ weight=1000; color=\"#e6f2ff\"; style=\"bold\" ];\n",
         i, i + 1
         );
     }
@@ -205,12 +206,12 @@ static errors ListVisualDump(list_t* list){
     fprintf(list->files.visDump, "\n");
 
     fprintf(list->files.visDump,
-        "\tnode000 -> node000 [ color=red; ];\n"
+        "\tnode000 -> node000 [ color=\"#fd4381\"; style=\"bold\" ];\n"
     );
 
     for (int64_t i = list->head; i != 0; i = list->next[i]){
         fprintf(list->files.visDump,
-        "\tnode%0.3lld -> node%0.3lld [ color=red;];\n",
+        "\tnode%0.3lld -> node%0.3lld [ color=\"#fd4381\"; constraint = false; style=\"bold\"];\n",
         i, list->next[i]
         );
     }
@@ -218,19 +219,19 @@ static errors ListVisualDump(list_t* list){
     fprintf(list->files.visDump, "\n");
 
     fprintf(list->files.visDump,
-        "\tnode000 -> node000 [ color=blue; ];\n"
+        "\tnode000 -> node000 [ color=\"#3474f5\"; style=\"bold\"] ;\n"
     );
 
     for (int64_t i = list->tail; i != 0; i = list->prev[i]){
         fprintf(list->files.visDump,
-        "\tnode%0.3lld -> node%0.3lld [ color=blue; constraint = false];\n",
+        "\tnode%0.3lld -> node%0.3lld [ color=\"#3474f5\"; style=\"bold\" ];\n",
         i, list->prev[i]
         );
     }
 
     fprintf(list->files.visDump,
-    "header [shape=Mrecord; label = \" { head = %lld | tail = %lld | numElems = %lld } \"]\n"
-    "{ rank = same; \"header\"; \"node000\"; }",
+    "header [fontname=\"SF Pro\"; shape=Mrecord; style=filled; color=\"#e6f2ff\"; label = \" { head = %lld | tail = %lld | numElems = %lld } \"]\n"
+    "{ rank = same; \"header\"; \"node000\"; }\n",
     list->head, list->tail, list->numElem
     );
 
