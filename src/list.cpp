@@ -2,15 +2,25 @@
 
 #define MEOW fprintf(stderr, "\e[0;31m" "\nmeow\n" "\e[0m");
 
-static errors ListVerify    (list_t* list);
-static errors ListVisualDump(list_t* list);
-static errors FillNext      (list_t* list);
-static errors FillPrev      (list_t* list);
+static enum errors{
+    OK              =   0,
+    ERR             =   1,
+    MEM_ERR         =   2,
+    NULL_ERR        =   3,
+    OVERFLOW_ERR    =   4,
+    LINK_ERR        =   5
+};
+
+static int ListVerify       (list_t* list);
+static int ListVisualDump   (list_t* list);
+static int FillNext         (list_t* list);
+static int FillPrev         (list_t* list);
+static int DoDot            (list_t* list);
 
 
 /*==================================================================================*/
 
-errors ListCtor(list_t* list){
+int ListCtor(list_t* list){
 
     list->data = (data_t*)calloc(LIST_SIZE, sizeof(data_t));
     if (list->data == nullptr){ printf("memory error\n"); return MEM_ERR;}
@@ -21,6 +31,7 @@ errors ListCtor(list_t* list){
     list->prev = (int64_t*)calloc(LIST_SIZE, sizeof(int64_t));
     if (list->prev == nullptr){ printf("memory error\n"); return MEM_ERR;}
 
+    list->files.visDumpName     = "visdump.dot";
     list->files.visDump = fopen("visdump.dot", "w");
     list->files.logFile = fopen(list->files.logFilename, "w");
 
@@ -42,7 +53,9 @@ errors ListCtor(list_t* list){
 
 /*==================================================================================*/
 
-static errors FillNext(list_t* list){
+static int FillNext(list_t* list){
+
+    list->next[0] = 0;
 
     for (int i = 1; i < list->size - 1; i++){
         list->next[i] = i + 1;
@@ -55,7 +68,12 @@ static errors FillNext(list_t* list){
 
 /*==================================================================================*/
 
-static errors FillPrev(list_t* list){
+static int FillPrev(list_t* list){
+    //check if size > 2
+
+    list->prev[0] = 0;
+    list->prev[1] = 0;
+
     for (int i = 2; i < list->size - 1; i++){
         list->prev[i] = i - 1;
     }
@@ -68,7 +86,7 @@ static errors FillPrev(list_t* list){
 /*==================================================================================*/
 
 
-errors ListDtor(list_t* list){
+int ListDtor(list_t* list){
     if (ListVerify(list)) return ERR;
 
     fclose(list->files.logFile);
@@ -83,7 +101,7 @@ errors ListDtor(list_t* list){
 
 /*==================================================================================*/
 
-errors ListDump(list_t* list){
+int ListDump(list_t* list){
 
     printf(BGRN "=====================================\n" RESET);
     printf(BBLU "Start of dump.\n" RESET);
@@ -97,8 +115,8 @@ errors ListDump(list_t* list){
     printf("\n");
     printf("Next:\t%p\n"        , list->next);
     printf("Prev:\t%p\n"        , list->prev);
-    printf("Head:\t%lld\n"      , list->head);
-    printf("Tail:\t%lld\n"      , list->tail);
+    printf("Head:\t%lld\n"      , list->next[0]);
+    printf("Tail:\t%lld\n"      , list->prev[0]);
     printf("Free:\t%lld\n"      , list->free);
 
     printf(YEL "---------------------------\n" RESET);
@@ -181,8 +199,8 @@ errors ListDump(list_t* list){
 
 /*==================================================================================*/
 
-static errors ListVisualDump(list_t* list){
-    list->files.visDump = fopen("visdump.dot", "w");
+static int ListVisualDump(list_t* list){
+    list->files.visDump = fopen(list->files.visDumpName, "w");
     fprintf(list->files.visDump, "digraph G{\n");
 
     fprintf(list->files.visDump, "\trankdir=LR;\n");
@@ -190,7 +208,7 @@ static errors ListVisualDump(list_t* list){
 
     for (int i = 0; i < list->numElem + 1; i++){
         fprintf(list->files.visDump,
-        "\tnode%0.3d [fontname=\"SF Pro\"; shape=Mrecord; style=filled; color=\"#e6f2ff\";label = \" { %0.3d | data = %3.0lld | next = %lld | prev = %lld } \"];\n",
+        "\tnode%0.3d [fontname=\"SF Pro\"; shape=Mrecord; style=filled; color=\"#e6f2ff\";label = \" { %0.3d } | { data = %3.0lld } | { next = %lld } | { prev = %lld } \"];\n",
         i, i, list->data[i], list->next[i], list->prev[i]);
     }
 
@@ -205,11 +223,7 @@ static errors ListVisualDump(list_t* list){
 
     fprintf(list->files.visDump, "\n");
 
-    fprintf(list->files.visDump,
-        "\tnode000 -> node000 [ color=\"#fd4381\"; style=\"bold\" ];\n"
-    );
-
-    for (int64_t i = list->head; i != 0; i = list->next[i]){
+    for (int64_t i = list->next[0]; i != 0; i = list->next[i]){
         fprintf(list->files.visDump,
         "\tnode%0.3lld -> node%0.3lld [ color=\"#fd4381\"; constraint = false; style=\"bold\"];\n",
         i, list->next[i]
@@ -218,11 +232,7 @@ static errors ListVisualDump(list_t* list){
 
     fprintf(list->files.visDump, "\n");
 
-    fprintf(list->files.visDump,
-        "\tnode000 -> node000 [ color=\"#3474f5\"; style=\"bold\"] ;\n"
-    );
-
-    for (int64_t i = list->tail; i != 0; i = list->prev[i]){
+    for (int64_t i = list->prev[0]; i != 0; i = list->prev[i]){
         fprintf(list->files.visDump,
         "\tnode%0.3lld -> node%0.3lld [ color=\"#3474f5\"; style=\"bold\" ];\n",
         i, list->prev[i]
@@ -232,99 +242,73 @@ static errors ListVisualDump(list_t* list){
     fprintf(list->files.visDump,
     "header [fontname=\"SF Pro\"; shape=Mrecord; style=filled; color=\"#e6f2ff\"; label = \" { head = %lld | tail = %lld | numElems = %lld } \"]\n"
     "{ rank = same; \"header\"; \"node000\"; }\n",
-    list->head, list->tail, list->numElem
+    list->next[0], list->prev[0], list->numElem
     );
 
     fprintf(list->files.visDump, "}\n");
 
     fclose(list->files.visDump);
+
+    DoDot(list);
+
     getchar();
     return OK;
 }
 
 /*==================================================================================*/
 
-static errors ListVerify(list_t* list){
+static int DoDot(list_t* list){
+    char command[100]   = {};
+    char* meow          = "output.png";
+    sprintf(command, "dot -Tpng %s > %s", list->files.visDumpName, meow);
+    system(command);
 
     return OK;
 }
 
 /*==================================================================================*/
 
-static errors ListBeginList(list_t* list, data_t dataElem){
+static int ListVerify(list_t* list){
+    if (!list) return NULL_ERR;
 
-    list->data[list->free] = dataElem;
+    if (!list->data || !list->next || !list->prev) return NULL_ERR;
 
-    list->head  = list->free; //free == 1
-    list->tail  = list->free;
+    if (list->numElem > list->size) return OVERFLOW_ERR;
 
-    list->free  = list->next[list->free];
-    list->next[list->prev[list->free]] = 0;
-    list->prev[list->free] = 0;
-
-    list->numElem++;
-    return OK;
-}
-
-
-
-/*==================================================================================*/
-
-errors  ListAddStart(list_t* list, data_t dataElem){
-    if (ListVerify(list)) return ERR;
-
-    if (list->numElem == 0){
-        ListBeginList(list, dataElem);
-        return OK;
+    for (int64_t i = list->next[0], ctr = 0; i != 0 && ctr < list->numElem; i = list->next[i], ctr++){
+        if (i != list->next[list->prev[i]]) return LINK_ERR;
     }
 
-
-    list->data[list->free] = dataElem;
-
-    int64_t temp = list->next[list->free];
-                   list->next[list->free] = list->head;
-
-    list->prev[list->head] = list->free;
-    list->prev[list->free] = 0;
-
-    list->head = list->free;
-                 list->free = temp;
-
-
-    list->numElem++;
-    return OK;
-}
-
-/*==================================================================================*/
-
-errors  ListAddEnd(list_t* list, data_t dataElem){
-    if (ListVerify(list)) return ERR;
-
-    if (list->numElem == 0){
-        ListBeginList(list, dataElem);
-        return OK;
+    for (int64_t i = list->prev[0], ctr = 0; i != 0 && ctr < list->numElem; i = list->prev[i], ctr++){
+        if (i != list->prev[list->next[i]]) return LINK_ERR;
     }
 
-    list->data[list->free] = dataElem;
-
-    int64_t temp = list->next[list->free];
-                   list->next[list->free] = 0;
-
-    list->prev[list->free] = list->tail;
-    list->next[list->tail] = list->free;
-
-    list->tail = list->free;
-                 list->free = temp;
-
-    list->prev[list->free] = 0;
-
-    list->numElem++;
     return OK;
 }
 
 /*==================================================================================*/
 
-errors  ListAddAfter(list_t* list, data_t dataElem, uint64_t param){
+int ListAddStart(list_t* list, data_t dataElem){
+    if (ListVerify(list)) return ERR;
+
+    ListAddAfter(list, dataElem, 0);
+
+    return OK;
+}
+
+/*==================================================================================*/
+
+int ListAddEnd(list_t* list, data_t dataElem){
+    if (ListVerify(list)) return ERR;
+
+    ListAddAfter(list, dataElem, list->prev[0]);
+
+    return OK;
+}
+
+/*==================================================================================*/
+
+int ListAddAfter(list_t* list, data_t dataElem, uint64_t param){
     if (ListVerify(list)) return ERR;
     //verify list contains param
     int64_t temp2 = list->next[list->free];
@@ -343,3 +327,15 @@ errors  ListAddAfter(list_t* list, data_t dataElem, uint64_t param){
     list->numElem++;
     return OK;
 }
+
+/*==================================================================================*/
+
+int ListAddBefore(list_t* list, data_t dataElem, uint64_t param){
+    if (ListVerify(list)) return ERR;
+
+    ListAddAfter(list, dataElem, list->prev[param]);
+
+    return OK;
+}
+
+/*==================================================================================*/
