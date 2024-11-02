@@ -4,6 +4,7 @@
 int main(int argc, char* argv[]){
     list_t l = {};
     ListCtor(&l);
+    printf(BRED "%d\n" RESET, l.lastOperation);
     ListDump(&l);
     ListAddEnd(&l, 10);
     ListDump(&l);
@@ -50,7 +51,7 @@ int main(int argc, char* argv[]){
     ListFindPos(&l, 40, &meow);
     printf(BGRN "%lu\n" RESET, meow);
 
-    HTMLDump(&l);
+    HTMLDumpGenerate(&l);
 
     return 0;
 }

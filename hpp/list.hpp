@@ -34,6 +34,7 @@ typedef struct list{
     uint64_t    numElem;
 
     uint64_t    lastAdded;
+    uint64_t    lastOperation;
     uint64_t    numDump;
 
     files_t     files;
@@ -43,7 +44,7 @@ typedef struct list{
 int ListCtor            (list_t* list);
 int ListDtor            (list_t* list);
 int ListDump            (list_t* list);
-int HTMLDump            (list_t* list);
+int HTMLDumpGenerate    (list_t* list);
 
 int ListAddStart        (list_t* list, data_t dataElem);
 int ListAddEnd          (list_t* list, data_t dataElem);

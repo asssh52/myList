@@ -12,11 +12,39 @@ enum errors{
     INDEX_ERR       =   6
 };
 
-static int ListVerify       (list_t* list);
-static int ListVisualDump   (list_t* list);
-static int FillNext         (list_t* list);
-static int FillPrev         (list_t* list);
-static int DoDot            (list_t* list);
+enum operations{
+    CTOR        = 1,
+    DTOR        = 2,
+
+    ADD_START   = 3,
+    ADD_END     = 4,
+    ADD_AFTER   = 5,
+    ADD_BEFORE  = 6,
+
+    REM_START   = 7,
+    REM_END     = 8,
+    REM_AFTER   = 9,
+    REM_BEFORE  = 10,
+
+    FIND_POS    = 11,
+    GETBY_POS   = 12,
+
+    GET_START   = 13,
+    GET_END     = 14,
+    GET_AFTER   = 15,
+    GET_BEFORE  = 16,
+
+    DEL         = 17
+};
+
+static int ListVerify           (list_t* list);
+static int ListVisualDump       (list_t* list);
+static int FillNext             (list_t* list);
+static int FillPrev             (list_t* list);
+static int DoDot                (list_t* list);
+static int HTMLGenerateHead     (list_t* list);
+static int HTMLGenerateBody     (list_t* list);
+static int GetLastOperation     (list_t* list, char** lastOper);
 
 
 
@@ -51,6 +79,7 @@ int ListCtor(list_t* list){
 
     printf(CYN "list created\n" RESET);
 
+    list->lastOperation = CTOR;
     return OK;
 }
 
@@ -99,6 +128,7 @@ int ListDtor(list_t* list){
     free(list->next);
     free(list->prev);
 
+    list->lastOperation = DTOR;
     return OK;
 }
 
@@ -201,6 +231,8 @@ int ListDump(list_t* list){
 /*==================================================================================*/
 
 static int ListVisualDump(list_t* list){
+    if (list->numDump == 0) HTMLGenerateHead(list);
+
     list->files.visDump = fopen(list->files.visDumpName, "w");
     fprintf(list->files.visDump, "digraph G{\n");
 
@@ -271,6 +303,7 @@ static int ListVisualDump(list_t* list){
     fclose(list->files.visDump);
 
     DoDot(list);
+    HTMLGenerateBody(list);
 
     return OK;
 }
@@ -293,28 +326,136 @@ static int DoDot(list_t* list){
 }
 
 /*==================================================================================*/
-
-int HTMLDump(list_t* list){
+static int HTMLGenerateHead(list_t* list){
     fprintf(list->files.htmlDump, "<html>\n");
 
     fprintf(list->files.htmlDump, "<head>\n");
     fprintf(list->files.htmlDump, "</head>\n");
 
-
-
     fprintf(list->files.htmlDump, "<body style=\"background-color:#f8fff8;\">\n");
-    fprintf(list->files.htmlDump, "<div style=\"text-align: center;\">\n");
-    for (int i = 0; i < list->numDump; i++){
-        fprintf(list->files.htmlDump, "\t<h2 style=\"font-family: 'Haas Grot Text R Web', 'Helvetica Neue', Helvetica, Arial, sans-serif;'\"> Dump: %d\n\t<br>\n", i);
-        fprintf(list->files.htmlDump, "\t<img src=\"./bin/png/output%d.png\">\n\t<br>\n\t<br>\n", i);
-    }
-    fprintf(list->files.htmlDump, "</div>\n");
-    fprintf(list->files.htmlDump, "</body>\n");
 
-    fprintf(list->files.htmlDump, "</html>\n");
     return OK;
 }
 
+static int HTMLGenerateBody(list_t* list){
+    char* lastOper = "meow";
+    GetLastOperation(list, &lastOper);
+
+    fprintf(list->files.htmlDump, "<div style=\"text-align: center;\">\n");
+
+    fprintf(list->files.htmlDump, "\t<h2 style=\"font-family: 'Haas Grot Text R Web', 'Helvetica Neue', Helvetica, Arial, sans-serif;'\"> Dump: %llu</h2>\n", list->numDump);
+    fprintf(list->files.htmlDump, "\t<p style=\"font-family: 'Haas Grot Text R Web', 'Helvetica Neue', Helvetica, Arial, sans-serif;'\"> Last operation: %s</p>\n", lastOper);
+    fprintf(list->files.htmlDump, "\t<img src=\"./bin/png/output%llu.png\">\n\t<br>\n\t<br>\n\t<br>\n", list->numDump - 1);
+
+    fprintf(list->files.htmlDump, "</div>\n");
+
+    return OK;
+}
+
+int HTMLDumpGenerate(list_t* list){
+
+
+    fprintf(list->files.htmlDump, "</body>\n");
+    fprintf(list->files.htmlDump, "</html>\n");
+
+    return OK;
+}
+
+static int GetLastOperation(list_t* list, char** lastOper){
+    switch(list->lastOperation){
+        case CTOR:{
+            *lastOper = "ListCtor";
+            break;
+        }
+
+        case DTOR:{
+            *lastOper = "ListDtor";
+            break;
+        }
+
+        case ADD_START:{
+            *lastOper = "ListAddStart";
+            break;
+        }
+
+        case ADD_END:{
+            *lastOper = "ListAddEnd";
+            break;
+        }
+
+        case ADD_AFTER:{
+            *lastOper = "ListAddAfter";
+            break;
+        }
+
+        case ADD_BEFORE:{
+            *lastOper = "ListAddBefore";
+            break;
+        }
+
+        case REM_START:{
+            *lastOper = "ListRemoveStart";
+            break;
+        }
+
+        case REM_END:{
+            *lastOper = "ListRemoveEnd";
+            break;
+        }
+
+        case REM_AFTER:{
+            *lastOper = "ListRemoveAfter";
+            break;
+        }
+
+        case REM_BEFORE:{
+            *lastOper = "ListRemoveBefore";
+            break;
+        }
+
+        case FIND_POS:{
+            *lastOper = "ListFindPos";
+            break;
+        }
+
+        case GETBY_POS:{
+            *lastOper = "ListGetByPos";
+            break;
+        }
+
+        case GET_START:{
+            *lastOper = "ListGetStart";
+            break;
+        }
+
+        case GET_END:{
+            *lastOper = "ListGetEnd";
+            break;
+        }
+
+        case GET_AFTER:{
+            *lastOper = "ListGetAfter";
+            break;
+        }
+
+        case GET_BEFORE:{
+            *lastOper = "ListGetBefore";
+            break;
+        }
+
+        case DEL:{
+            *lastOper = "ListDel";
+            break;
+        }
+
+        default:{
+            *lastOper = "Unknown operation";
+            break;
+        }
+    }
+
+    return OK;
+}
 /*==================================================================================*/
 
 static int ListVerify(list_t* list){
@@ -356,6 +497,8 @@ int ListAddAfter(list_t* list, data_t dataElem, uint64_t param){
 
     list->lastAdded = list->next[param];
     list->numElem++;
+
+    list->lastOperation = ADD_AFTER;
     return OK;
 }
 
@@ -366,6 +509,7 @@ int ListAddBefore(list_t* list, data_t dataElem, uint64_t param){
 
     ListAddAfter(list, dataElem, list->prev[param]);
 
+    list->lastOperation = ADD_BEFORE;
     return OK;
 }
 
@@ -376,6 +520,7 @@ int ListAddStart(list_t* list, data_t dataElem){
 
     ListAddAfter(list, dataElem, 0);
 
+    list->lastOperation = ADD_START;
     return OK;
 }
 
@@ -386,6 +531,7 @@ int ListAddEnd(list_t* list, data_t dataElem){
 
     ListAddAfter(list, dataElem, list->prev[0]);
 
+    list->lastOperation = ADD_END;
     return OK;
 }
 
@@ -410,6 +556,8 @@ int ListRemoveAfter(list_t* list, uint64_t param){
 
     list->lastAdded = -1;
     list->numElem--;
+
+    list->lastOperation = REM_AFTER;
     return OK;
 }
 
@@ -420,6 +568,7 @@ int ListRemoveBefore(list_t* list, uint64_t param){
 
     ListRemoveAfter(list, list->prev[list->prev[param]]);
 
+    list->lastOperation = REM_BEFORE;
     return OK;
 }
 
@@ -430,6 +579,7 @@ int ListRemoveStart(list_t* list){
 
     ListRemoveAfter(list, 0);
 
+    list->lastOperation = REM_START;
     return OK;
 }
 
@@ -440,6 +590,7 @@ int ListRemoveEnd(list_t* list){
 
     ListRemoveBefore(list, 0);
 
+    list->lastOperation = REM_END;
     return OK;
 }
 
@@ -452,11 +603,14 @@ int ListFindPos(list_t* list, data_t elem, uint64_t* retValue){
         if (elem == list->data[i]){
             *retValue = i;
 
+            list->lastOperation = FIND_POS;
             return OK;
         }
     }
 
     *retValue = 0;
+
+    list->lastOperation = FIND_POS;
     return OK;
 }
 
@@ -475,6 +629,7 @@ int ListGetByPos(list_t* list, uint64_t index, data_t** retValue){
         }
     }
 
+    list->lastOperation = GETBY_POS;
     return OK;
 }
 
@@ -489,6 +644,7 @@ int ListDel(list_t* list){
     FillNext(list);
     FillPrev(list);
 
+    list->lastOperation = DEL;
     return OK;
 }
 
@@ -499,6 +655,7 @@ int ListGetAfter(list_t* list, uint64_t param, data_t** retValue){
 
     *retValue = list->data + list->next[param];
 
+    list->lastOperation = GET_AFTER;
     return OK;
 }
 
@@ -509,6 +666,7 @@ int ListGetBefore(list_t* list, uint64_t param, data_t** retValue){
 
     *retValue = list->data + list->prev[param];
 
+    list->lastOperation = GET_BEFORE;
     return OK;
 }
 
@@ -519,6 +677,7 @@ int ListGetStart(list_t* list, data_t** retValue){
 
     *retValue = list->data + list->next[0];
 
+    list->lastOperation = GET_START;
     return OK;
 }
 
@@ -529,5 +688,6 @@ int ListGetEnd(list_t* list, data_t** retValue){
 
     *retValue = list->data + list->prev[0];
 
+    list->lastOperation = GET_END;
     return OK;
 }
