@@ -50,5 +50,7 @@ int main(int argc, char* argv[]){
     ListFindPos(&l, 40, &meow);
     printf(BGRN "%lu\n" RESET, meow);
 
+    HTMLDump(&l);
+
     return 0;
 }

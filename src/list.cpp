@@ -19,6 +19,7 @@ static int FillPrev         (list_t* list);
 static int DoDot            (list_t* list);
 
 
+
 /*==================================================================================*/
 
 int ListCtor(list_t* list){
@@ -33,8 +34,11 @@ int ListCtor(list_t* list){
     if (list->prev == nullptr){ printf("memory error\n"); return MEM_ERR;}
 
     list->files.visDumpName     = "visdump.dot";
-    list->files.visDump = fopen("visdump.dot", "w");
-    list->files.logFile = fopen(list->files.logFilename, "w");
+    list->files.htmlDumpName    = "htmldump.html";
+
+    list->files.htmlDump =  fopen(list->files.htmlDumpName, "w");
+    list->files.visDump  =  fopen(list->files.visDumpName,  "w");
+    list->files.logFile  =  fopen(list->files.logFilename,  "w");
 
     list->size  = LIST_SIZE;
     list->free  = 1;
@@ -188,11 +192,9 @@ int ListDump(list_t* list){
     printf(BBLU "End of dump.\n" RESET);
     printf(BGRN "=====================================\n" RESET);
 
-    /* --------------- */
-    // VISUAL DUMP:
-    /* --------------- */
     ListVisualDump(list);
 
+    getchar();
     return OK;
 }
 
@@ -211,9 +213,18 @@ static int ListVisualDump(list_t* list){
     );
 
     for (int64_t i = list->next[0]; i != 0; i = list->next[i]){
+        if (i == list->lastAdded){
+            fprintf(list->files.visDump,
+            "\tnode%0.3lld [fontname=\"SF Pro\"; shape=Mrecord; style=filled; color=\"#FFD5F2\";label = \" { %0.3lld } | { data = %3.0lld } | { next = %lld } | { prev = %lld } \"];\n",
+            i, i, list->data[i], list->next[i], list->prev[i]);
+        }
+
+        else
+        {
         fprintf(list->files.visDump,
-        "\tnode%0.3lld [fontname=\"SF Pro\"; shape=Mrecord; style=filled; color=\"#e6f2ff\";label = \" { %0.3lld } | { data = %3.0lld } | { next = %lld } | { prev = %lld } \"];\n",
+        "\tnode%0.3lld [fontname=\"SF Pro\"; shape=Mrecord; style=filled; color=\"#d5e9ff\";label = \" { %0.3lld } | { data = %3.0lld } | { next = %lld } | { prev = %lld } \"];\n",
         i, i, list->data[i], list->next[i], list->prev[i]);
+        }
     }
 
     fprintf(list->files.visDump, "\n");
@@ -261,7 +272,6 @@ static int ListVisualDump(list_t* list){
 
     DoDot(list);
 
-    getchar();
     return OK;
 }
 
@@ -269,10 +279,39 @@ static int ListVisualDump(list_t* list){
 
 static int DoDot(list_t* list){
     char command[100]   = {};
-    const char* meow    = "output.png";
-    snprintf(command, 100, "dot -Tpng %s > %s", list->files.visDumpName, meow);
+    char out[100]       = {};
+
+    const char* startOut= "./bin/png/output";
+    const char* endOut  = ".png";
+
+    snprintf(out, 100, "%s%llu%s", startOut, list->numDump, endOut);
+    snprintf(command, 100, "dot -Tpng %s > %s", list->files.visDumpName, out);
     system(command);
 
+    list->numDump++;
+    return OK;
+}
+
+/*==================================================================================*/
+
+int HTMLDump(list_t* list){
+    fprintf(list->files.htmlDump, "<html>\n");
+
+    fprintf(list->files.htmlDump, "<head>\n");
+    fprintf(list->files.htmlDump, "</head>\n");
+
+
+
+    fprintf(list->files.htmlDump, "<body style=\"background-color:#f8fff8;\">\n");
+    fprintf(list->files.htmlDump, "<div style=\"text-align: center;\">\n");
+    for (int i = 0; i < list->numDump; i++){
+        fprintf(list->files.htmlDump, "\t<h2 style=\"font-family: 'Haas Grot Text R Web', 'Helvetica Neue', Helvetica, Arial, sans-serif;'\"> Dump: %d\n\t<br>\n", i);
+        fprintf(list->files.htmlDump, "\t<img src=\"./bin/png/output%d.png\">\n\t<br>\n\t<br>\n", i);
+    }
+    fprintf(list->files.htmlDump, "</div>\n");
+    fprintf(list->files.htmlDump, "</body>\n");
+
+    fprintf(list->files.htmlDump, "</html>\n");
     return OK;
 }
 
@@ -314,6 +353,8 @@ int ListAddAfter(list_t* list, data_t dataElem, uint64_t param){
                             list->next[list->free] = temp;
 
     list->free = temp2;
+
+    list->lastAdded = list->next[param];
     list->numElem++;
     return OK;
 }
@@ -366,6 +407,8 @@ int ListRemoveAfter(list_t* list, uint64_t param){
     list->next[param]   = nextEl;
     list->prev[nextEl]  = param;
 
+
+    list->lastAdded = -1;
     list->numElem--;
     return OK;
 }

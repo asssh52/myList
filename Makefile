@@ -25,4 +25,4 @@ run:       ./bin/main.o ./bin/list.o
 	$(CXX) -c ./src/list.cpp $(CXXFLAGS) -o ./bin/list.o
 
 clean:
-	rm -f main ./bin/*.o
+	rm -f main ./bin/*.o ./bin/png/*.png

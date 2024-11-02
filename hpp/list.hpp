@@ -16,6 +16,9 @@ typedef struct files{
     char* visDumpName;
     FILE* visDump;
 
+    char* htmlDumpName;
+    FILE* htmlDump;
+
 } files_t;
 
 typedef struct list{
@@ -30,6 +33,9 @@ typedef struct list{
     uint64_t    size;
     uint64_t    numElem;
 
+    uint64_t    lastAdded;
+    uint64_t    numDump;
+
     files_t     files;
 
 } list_t;
@@ -37,6 +43,7 @@ typedef struct list{
 int ListCtor            (list_t* list);
 int ListDtor            (list_t* list);
 int ListDump            (list_t* list);
+int HTMLDump            (list_t* list);
 
 int ListAddStart        (list_t* list, data_t dataElem);
 int ListAddEnd          (list_t* list, data_t dataElem);
@@ -57,3 +64,5 @@ int ListGetAfter        (list_t* list, uint64_t param,  data_t**    retValue);
 int ListGetBefore       (list_t* list, uint64_t param,  data_t**    retValue);
 
 int ListDel             (list_t* list);
+
+
