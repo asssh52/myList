@@ -2,13 +2,14 @@
 
 #define MEOW fprintf(stderr, "\e[0;31m" "\nmeow\n" "\e[0m");
 
-static enum errors{
+enum errors{
     OK              =   0,
     ERR             =   1,
     MEM_ERR         =   2,
     NULL_ERR        =   3,
     OVERFLOW_ERR    =   4,
-    LINK_ERR        =   5
+    LINK_ERR        =   5,
+    INDEX_ERR       =   6
 };
 
 static int ListVerify       (list_t* list);
@@ -41,8 +42,6 @@ int ListCtor(list_t* list){
 
     FillNext(list);
     FillPrev(list);
-
-    ListDump(list);
 
     ListVerify(list);
 
@@ -206,18 +205,29 @@ static int ListVisualDump(list_t* list){
     fprintf(list->files.visDump, "\trankdir=LR;\n");
     fprintf(list->files.visDump, "\tbgcolor=\"#f8fff8\";\n");
 
-    for (int i = 0; i < list->numElem + 1; i++){
-        fprintf(list->files.visDump,
+    fprintf(list->files.visDump,
         "\tnode%0.3d [fontname=\"SF Pro\"; shape=Mrecord; style=filled; color=\"#e6f2ff\";label = \" { %0.3d } | { data = %3.0lld } | { next = %lld } | { prev = %lld } \"];\n",
+        0, 0, list->data[0], list->next[0], list->prev[0]
+    );
+
+    for (int64_t i = list->next[0]; i != 0; i = list->next[i]){
+        fprintf(list->files.visDump,
+        "\tnode%0.3lld [fontname=\"SF Pro\"; shape=Mrecord; style=filled; color=\"#e6f2ff\";label = \" { %0.3lld } | { data = %3.0lld } | { next = %lld } | { prev = %lld } \"];\n",
         i, i, list->data[i], list->next[i], list->prev[i]);
     }
 
     fprintf(list->files.visDump, "\n");
 
-    for (int i = 0; i < list->numElem; i++){
+
+    fprintf(list->files.visDump,
+        "\tnode%0.3d -> node%0.3lld [ weight=1000; color=\"#f8fff8\"; style=\"bold\" ];\n",
+        0, list->next[0]
+    );
+
+    for (int64_t i = list->next[0]; i != 0; i = list->next[i]){
         fprintf(list->files.visDump,
-        "\tnode%0.3d -> node%0.3d [ weight=1000; color=\"#e6f2ff\"; style=\"bold\" ];\n",
-        i, i + 1
+        "\tnode%0.3lld -> node%0.3lld [ weight=1000; color=\"#f8fff8\"; style=\"bold\" ];\n",
+        i, list->next[i]
         );
     }
 
@@ -259,8 +269,8 @@ static int ListVisualDump(list_t* list){
 
 static int DoDot(list_t* list){
     char command[100]   = {};
-    char* meow          = "output.png";
-    sprintf(command, "dot -Tpng %s > %s", list->files.visDumpName, meow);
+    const char* meow    = "output.png";
+    snprintf(command, 100, "dot -Tpng %s > %s", list->files.visDumpName, meow);
     system(command);
 
     return OK;
@@ -282,26 +292,6 @@ static int ListVerify(list_t* list){
     for (int64_t i = list->prev[0], ctr = 0; i != 0 && ctr < list->numElem; i = list->prev[i], ctr++){
         if (i != list->prev[list->next[i]]) return LINK_ERR;
     }
-
-    return OK;
-}
-
-/*==================================================================================*/
-
-int ListAddStart(list_t* list, data_t dataElem){
-    if (ListVerify(list)) return ERR;
-
-    ListAddAfter(list, dataElem, 0);
-
-    return OK;
-}
-
-/*==================================================================================*/
-
-int ListAddEnd(list_t* list, data_t dataElem){
-    if (ListVerify(list)) return ERR;
-
-    ListAddAfter(list, dataElem, list->prev[0]);
 
     return OK;
 }
@@ -339,3 +329,162 @@ int ListAddBefore(list_t* list, data_t dataElem, uint64_t param){
 }
 
 /*==================================================================================*/
+
+int ListAddStart(list_t* list, data_t dataElem){
+    if (ListVerify(list)) return ERR;
+
+    ListAddAfter(list, dataElem, 0);
+
+    return OK;
+}
+
+/*==================================================================================*/
+
+int ListAddEnd(list_t* list, data_t dataElem){
+    if (ListVerify(list)) return ERR;
+
+    ListAddAfter(list, dataElem, list->prev[0]);
+
+    return OK;
+}
+
+/*==================================================================================*/
+
+int ListRemoveAfter(list_t* list, uint64_t param){
+    if (ListVerify(list)) return ERR;
+    //verify list contains param
+    list->data[list->next[param]] = POISON;
+
+    uint64_t nextEl = list->next[list->next[param]];
+    uint64_t delEl  = list->next[param];
+
+    list->prev[list->free]  = delEl;
+    list->next[delEl]       = list->free;
+    list->prev[delEl]       = 0;
+
+    list->free = delEl;
+    list->next[param]   = nextEl;
+    list->prev[nextEl]  = param;
+
+    list->numElem--;
+    return OK;
+}
+
+/*==================================================================================*/
+
+int ListRemoveBefore(list_t* list, uint64_t param){
+    if (ListVerify(list)) return ERR;
+
+    ListRemoveAfter(list, list->prev[list->prev[param]]);
+
+    return OK;
+}
+
+/*==================================================================================*/
+
+int ListRemoveStart(list_t* list){
+    if (ListVerify(list)) return ERR;
+
+    ListRemoveAfter(list, 0);
+
+    return OK;
+}
+
+/*==================================================================================*/
+
+int ListRemoveEnd(list_t* list){
+    if (ListVerify(list)) return ERR;
+
+    ListRemoveBefore(list, 0);
+
+    return OK;
+}
+
+/*==================================================================================*/
+
+int ListFindPos(list_t* list, data_t elem, uint64_t* retValue){
+    if (ListVerify(list)) return ERR;
+
+    for (int64_t i = list->next[0]; i != 0; i = list->next[i]){
+        if (elem == list->data[i]){
+            *retValue = i;
+
+            return OK;
+        }
+    }
+
+    *retValue = 0;
+    return OK;
+}
+
+/*==================================================================================*/
+
+int ListGetByPos(list_t* list, uint64_t index, data_t** retValue){
+    if (ListVerify(list)) return ERR;
+
+    index--;
+    if (index > list->numElem || index < 0) return INDEX_ERR;
+
+    for (int64_t i = list->next[0], counter = 0; i != 0; i = list->next[i], counter++){
+        if (counter == index){
+            *retValue = list->data + i;
+            break;
+        }
+    }
+
+    return OK;
+}
+
+/*==================================================================================*/
+
+int ListDel(list_t* list){
+    if (ListVerify(list)) return ERR;
+
+    list->numElem = 0;
+    list->free  = 1;
+
+    FillNext(list);
+    FillPrev(list);
+
+    return OK;
+}
+
+/*==================================================================================*/
+
+int ListGetAfter(list_t* list, uint64_t param, data_t** retValue){
+    if (ListVerify(list)) return ERR;
+
+    *retValue = list->data + list->next[param];
+
+    return OK;
+}
+
+/*==================================================================================*/
+
+int ListGetBefore(list_t* list, uint64_t param, data_t** retValue){
+    if (ListVerify(list)) return ERR;
+
+    *retValue = list->data + list->prev[param];
+
+    return OK;
+}
+
+/*==================================================================================*/
+
+int ListGetStart(list_t* list, data_t** retValue){
+    if (ListVerify(list)) return ERR;
+
+    *retValue = list->data + list->next[0];
+
+    return OK;
+}
+
+/*==================================================================================*/
+
+int ListGetEnd(list_t* list, data_t** retValue){
+    if (ListVerify(list)) return ERR;
+
+    *retValue = list->data + list->prev[0];
+
+    return OK;
+}

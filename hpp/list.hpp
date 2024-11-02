@@ -34,13 +34,26 @@ typedef struct list{
 
 } list_t;
 
-int  ListCtor        (list_t* list);
-int  ListDtor        (list_t* list);
-int  ListDump        (list_t* list);
-int  ListAddStart    (list_t* list, data_t dataElem);
-int  ListAddEnd      (list_t* list, data_t dataElem);
-int  ListAddAfter    (list_t* list, data_t dataElem, uint64_t param);
-int  ListAddBefore   (list_t* list, data_t dataElem, uint64_t param);
-int  ListGet();
-int  ListRem();
-int  ListDel();
+int ListCtor            (list_t* list);
+int ListDtor            (list_t* list);
+int ListDump            (list_t* list);
+
+int ListAddStart        (list_t* list, data_t dataElem);
+int ListAddEnd          (list_t* list, data_t dataElem);
+int ListAddAfter        (list_t* list, data_t dataElem, uint64_t    param);
+int ListAddBefore       (list_t* list, data_t dataElem, uint64_t    param);
+
+int ListRemoveStart     (list_t* list);
+int ListRemoveEnd       (list_t* list);
+int ListRemoveAfter     (list_t* list, uint64_t param);
+int ListRemoveBefore    (list_t* list, uint64_t param);
+
+int ListFindPos         (list_t* list, data_t elem,     uint64_t*   retValue);
+int ListGetByPos        (list_t* list, uint64_t index,  data_t**    retValue);
+
+int ListGetStart        (list_t* list, data_t** retValue);
+int ListGetEnd          (list_t* list, data_t** retValue);
+int ListGetAfter        (list_t* list, uint64_t param,  data_t**    retValue);
+int ListGetBefore       (list_t* list, uint64_t param,  data_t**    retValue);
+
+int ListDel             (list_t* list);
