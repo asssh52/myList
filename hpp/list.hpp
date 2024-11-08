@@ -33,7 +33,7 @@ typedef struct list{
     uint64_t    size;
     uint64_t    numElem;
 
-    uint64_t    lastAdded;
+    uint64_t    lastModified;
     uint64_t    lastOperation;
     uint64_t    numDump;
 

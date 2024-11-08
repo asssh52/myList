@@ -4,20 +4,27 @@
 int main(int argc, char* argv[]){
     list_t l = {};
     ListCtor(&l);
-    printf(BRED "%d\n" RESET, l.lastOperation);
+    printf(BRED "%llu\n" RESET, l.lastOperation);
     ListDump(&l);
+
     ListAddEnd(&l, 10);
     ListDump(&l);
+
     ListAddEnd(&l, 20);
     ListDump(&l);
+
     ListAddEnd(&l, 30);
     ListDump(&l);
+
     ListAddEnd(&l, 40);
     ListDump(&l);
+
     ListAddEnd(&l, 50);
     ListDump(&l);
+
     ListAddEnd(&l, 60);
     ListDump(&l);
+
     ListAddEnd(&l, 70);
     ListDump(&l);
 
@@ -29,6 +36,9 @@ int main(int argc, char* argv[]){
     //ListDump(&l);
     ListRemoveBefore(&l, 2);
     ListDump(&l);
+
+    //l.next[4] = 6;
+
     ListRemoveBefore(&l, 6);
     ListDump(&l);
     ListRemoveAfter(&l, 3);

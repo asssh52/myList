@@ -41,6 +41,7 @@ static int ListVerify           (list_t* list);
 static int ListVisualDump       (list_t* list);
 static int FillNext             (list_t* list);
 static int FillPrev             (list_t* list);
+static int FillData             (list_t* list);
 static int DoDot                (list_t* list);
 static int HTMLGenerateHead     (list_t* list);
 static int HTMLGenerateBody     (list_t* list);
@@ -70,10 +71,10 @@ int ListCtor(list_t* list){
 
     list->size  = LIST_SIZE;
     list->free  = 1;
-    *list->data = POISON;
 
     FillNext(list);
     FillPrev(list);
+    FillData(list);
 
     ListVerify(list);
 
@@ -101,16 +102,24 @@ static int FillNext(list_t* list){
 /*==================================================================================*/
 
 static int FillPrev(list_t* list){
-    //check if size > 2
 
     list->prev[0] = 0;
-    list->prev[1] = 0;
 
-    for (int i = 2; i < list->size - 1; i++){
-        list->prev[i] = i - 1;
+    for (int i = 1; i < list->size; i++){
+        list->prev[i] = -1;
     }
 
-    list->prev[list->size - 1] = 0;
+    return OK;
+}
+
+
+/*==================================================================================*/
+
+static int FillData(list_t* list){
+
+    for (int i = 0; i < list->size; i++){
+        list->data[i] = POISON;
+    }
 
     return OK;
 }
@@ -137,7 +146,7 @@ int ListDtor(list_t* list){
 int ListDump(list_t* list){
 
     printf(BGRN "=====================================\n" RESET);
-    printf(BBLU "Start of dump.\n" RESET);
+    printf(BBLU "Start of dump:#%llu.\n" RESET, list->numDump + 1);
 
     if (!list){
         printf("list does not exist\n");
@@ -223,8 +232,6 @@ int ListDump(list_t* list){
     printf(BGRN "=====================================\n" RESET);
 
     ListVisualDump(list);
-
-    getchar();
     return OK;
 }
 
@@ -239,63 +246,96 @@ static int ListVisualDump(list_t* list){
     fprintf(list->files.visDump, "\trankdir=LR;\n");
     fprintf(list->files.visDump, "\tbgcolor=\"#f8fff8\";\n");
 
+
     fprintf(list->files.visDump,
-        "\tnode%0.3d [fontname=\"SF Pro\"; shape=Mrecord; style=filled; color=\"#e6f2ff\";label = \" { %0.3d } | { data = %3.0lld } | { next = %lld } | { prev = %lld } \"];\n",
+        "\tnode%0.3d [fontname=\"SF Pro\"; shape=Mrecord; style=filled; fillcolor=\"#e6f2ff\";label = \" { %0.3d } | { data = %3.0lld } | { next = %lld } | { prev = %lld } \"];\n",
         0, 0, list->data[0], list->next[0], list->prev[0]
     );
 
-    for (int64_t i = list->next[0]; i != 0; i = list->next[i]){
-        if (i == list->lastAdded){
-            fprintf(list->files.visDump,
-            "\tnode%0.3lld [fontname=\"SF Pro\"; shape=Mrecord; style=filled; color=\"#FFD5F2\";label = \" { %0.3lld } | { data = %3.0lld } | { next = %lld } | { prev = %lld } \"];\n",
-            i, i, list->data[i], list->next[i], list->prev[i]);
+    for (int64_t i = 0; i < list->size; i++){
+        //last modified
+        if (i == list->lastModified){
+            if (list->prev[i] != -1){
+                fprintf(list->files.visDump,
+                    "\tnode%0.3lld [fontname=\"SF Pro\"; shape=Mrecord; style=filled; color=\"#56A200\"; fillcolor=\"#e1f9c6\";label = \" { %0.3lld } | { data = %3.0lld } | { next = %lld } | { prev = %lld } \"];\n",
+                    i, i, list->data[i], list->next[i], list->prev[i]);
+            }
+            else{
+                fprintf(list->files.visDump,
+                    "\tnode%0.3lld [fontname=\"SF Pro\"; shape=Mrecord; style=filled; color=\"#FF2B2E\"; fillcolor=\"#F5A1A2\";label = \" { %0.3lld } | { data = %3.0lld } | { next = %lld } | { prev = %lld } \"];\n",
+                    i, i, list->data[i], list->next[i], list->prev[i]);
+            }
         }
 
+        //free
+        else if (list->prev[i] == -1){
+            fprintf(list->files.visDump,
+                    "\tnode%0.3lld [fontname=\"SF Pro\"; shape=Mrecord; style=filled; color=\"#01B5AE\" ;fillcolor=\"#C6F9F7\";label = \" { %0.3lld } | { data = %3.0lld } | { next = %lld } | { prev = %lld } \"];\n",
+                    i, i, list->data[i], list->next[i], list->prev[i]);
+        }
+
+        //elems
         else
         {
-        fprintf(list->files.visDump,
-        "\tnode%0.3lld [fontname=\"SF Pro\"; shape=Mrecord; style=filled; color=\"#d5e9ff\";label = \" { %0.3lld } | { data = %3.0lld } | { next = %lld } | { prev = %lld } \"];\n",
-        i, i, list->data[i], list->next[i], list->prev[i]);
+            fprintf(list->files.visDump,
+                    "\tnode%0.3lld [fontname=\"SF Pro\"; shape=Mrecord; style=filled; color=\"#58A8FF\" fillcolor=\"#d5e9ff\";label = \" { %0.3lld } | { data = %3.0lld } | { next = %lld } | { prev = %lld } \"];\n",
+                    i, i, list->data[i], list->next[i], list->prev[i]);
         }
+
+        //weight 1000
+        fprintf(list->files.visDump,
+        "\tnode%0.3lld -> node%0.3lld [ penwidth=3; weight=1000; style=\"invis\" ];\n",
+        i, (i + 1) % 16
+        );
+
+        //arrows
+
+        if (list->prev[list->next[i]] == i && list->next[list->prev[i]] == i){
+            fprintf(list->files.visDump,
+                "\tnode%0.3lld -> node%0.3lld [ penwidth=3; dir=both; color=\"#5ab12f\"; constraint = false; style=\"bold\"];\n",
+                i, list->next[i]
+            );
+
+        }
+
+        else{
+            //next
+            if (list->prev[i] != -1){
+                fprintf(list->files.visDump,
+                    "\tnode%0.3lld -> node%0.3lld [ penwidth=3; color=\"#fd4381\"; constraint = false; style=\"bold\"];\n",
+                    i, list->next[i]
+                );
+            }
+
+            else{
+                fprintf(list->files.visDump,
+                    "\tnode%0.3lld -> node%0.3lld [ penwidth=3; color=\"#01E5EE\"; constraint = false; style=\"bold\"];\n",
+                    i, list->next[i]
+                );
+            }
+            //next
+
+            //prev
+            if (list->prev[i] != -1 && list->next[list->prev[i]] != -1){
+                fprintf(list->files.visDump,
+                    "\tnode%0.3lld -> node%0.3lld [ penwidth=3 color=\"#3474f5\"; style=\"bold\" ];\n",
+                    i, list->prev[i]
+                );
+
+
+            }
+            //prev
+        }
+        fprintf(list->files.visDump, "\n");
     }
 
     fprintf(list->files.visDump, "\n");
-
 
     fprintf(list->files.visDump,
-        "\tnode%0.3d -> node%0.3lld [ weight=1000; color=\"#f8fff8\"; style=\"bold\" ];\n",
-        0, list->next[0]
-    );
-
-    for (int64_t i = list->next[0]; i != 0; i = list->next[i]){
-        fprintf(list->files.visDump,
-        "\tnode%0.3lld -> node%0.3lld [ weight=1000; color=\"#f8fff8\"; style=\"bold\" ];\n",
-        i, list->next[i]
-        );
-    }
-
-    fprintf(list->files.visDump, "\n");
-
-    for (int64_t i = list->next[0]; i != 0; i = list->next[i]){
-        fprintf(list->files.visDump,
-        "\tnode%0.3lld -> node%0.3lld [ color=\"#fd4381\"; constraint = false; style=\"bold\"];\n",
-        i, list->next[i]
-        );
-    }
-
-    fprintf(list->files.visDump, "\n");
-
-    for (int64_t i = list->prev[0]; i != 0; i = list->prev[i]){
-        fprintf(list->files.visDump,
-        "\tnode%0.3lld -> node%0.3lld [ color=\"#3474f5\"; style=\"bold\" ];\n",
-        i, list->prev[i]
-        );
-    }
-
-    fprintf(list->files.visDump,
-    "header [fontname=\"SF Pro\"; shape=Mrecord; style=filled; color=\"#e6f2ff\"; label = \" { head = %lld | tail = %lld | numElems = %lld } \"]\n"
-    "{ rank = same; \"header\"; \"node000\"; }\n",
-    list->next[0], list->prev[0], list->numElem
+        "\theader [fontname=\"SF Pro\"; shape=Mrecord; style=filled; color=\"#58A8FF\"; fillcolor=\"#e6f2ff\"; label = \" { head = %lld | tail = %lld | numElems = %lld | free = %lld} \"]\n"
+        "\t{ rank = same; \"header\"; \"node000\"; }\n"
+        "\theader -> node%0.3lld [ penwidth=3; color=\"#01E5EE\"; constraint = false; style=\"bold\"];\n",
+        list->next[0], list->prev[0], list->numElem, list->free, list->free
     );
 
     fprintf(list->files.visDump, "}\n");
@@ -353,7 +393,6 @@ static int HTMLGenerateBody(list_t* list){
 }
 
 int HTMLDumpGenerate(list_t* list){
-
 
     fprintf(list->files.htmlDump, "</body>\n");
     fprintf(list->files.htmlDump, "</html>\n");
@@ -485,7 +524,7 @@ int ListAddAfter(list_t* list, data_t dataElem, uint64_t param){
 
     list->data[list->free] = dataElem;
 
-    list->prev[list->next[list->free]] = 0;
+    list->prev[list->next[list->free]] = -1;
     list->prev[list->free] = param;
     list->prev[list->next[param]] = list->free;
 
@@ -495,7 +534,7 @@ int ListAddAfter(list_t* list, data_t dataElem, uint64_t param){
 
     list->free = temp2;
 
-    list->lastAdded = list->next[param];
+    list->lastModified = list->next[param];
     list->numElem++;
 
     list->lastOperation = ADD_AFTER;
@@ -545,16 +584,16 @@ int ListRemoveAfter(list_t* list, uint64_t param){
     uint64_t nextEl = list->next[list->next[param]];
     uint64_t delEl  = list->next[param];
 
-    list->prev[list->free]  = delEl;
+    list->prev[list->free]  = -1;
     list->next[delEl]       = list->free;
-    list->prev[delEl]       = 0;
+    list->prev[delEl]       = -1;
 
     list->free = delEl;
     list->next[param]   = nextEl;
     list->prev[nextEl]  = param;
 
 
-    list->lastAdded = -1;
+    list->lastModified = list->free;
     list->numElem--;
 
     list->lastOperation = REM_AFTER;
@@ -643,7 +682,9 @@ int ListDel(list_t* list){
 
     FillNext(list);
     FillPrev(list);
+    FillData(list);
 
+    list->lastModified = -1;
     list->lastOperation = DEL;
     return OK;
 }
