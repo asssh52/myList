@@ -246,20 +246,16 @@ static int ListVisualDump(list_t* list){
     fprintf(list->files.visDump, "\trankdir=LR;\n");
     fprintf(list->files.visDump, "\tbgcolor=\"#f8fff8\";\n");
 
-
-    fprintf(list->files.visDump,
-        "\tnode%0.3d [fontname=\"SF Pro\"; shape=Mrecord; style=filled; fillcolor=\"#e6f2ff\";label = \" { %0.3d } | { data = %3.0lld } | { next = %lld } | { prev = %lld } \"];\n",
-        0, 0, list->data[0], list->next[0], list->prev[0]
-    );
-
     for (int64_t i = 0; i < list->size; i++){
         //last modified
         if (i == list->lastModified){
+
             if (list->prev[i] != -1){
                 fprintf(list->files.visDump,
                     "\tnode%0.3lld [fontname=\"SF Pro\"; shape=Mrecord; style=filled; color=\"#56A200\"; fillcolor=\"#e1f9c6\";label = \" { %0.3lld } | { data = %3.0lld } | { next = %lld } | { prev = %lld } \"];\n",
                     i, i, list->data[i], list->next[i], list->prev[i]);
             }
+
             else{
                 fprintf(list->files.visDump,
                     "\tnode%0.3lld [fontname=\"SF Pro\"; shape=Mrecord; style=filled; color=\"#FF2B2E\"; fillcolor=\"#F5A1A2\";label = \" { %0.3lld } | { data = %3.0lld } | { next = %lld } | { prev = %lld } \"];\n",
@@ -268,6 +264,12 @@ static int ListVisualDump(list_t* list){
         }
 
         //free
+        else if (i == 0){
+                fprintf(list->files.visDump,
+                    "\tnode%0.3lld [fontname=\"SF Pro\"; shape=Mrecord; style=filled; color=\"#B7AE02\"; fillcolor=\"#FBF586\";label = \" { %0.3lld } | { data = %3.0lld } | { next = %lld } | { prev = %lld } \"];\n",
+                    i, i, list->data[i], list->next[i], list->prev[i]);
+        }
+
         else if (list->prev[i] == -1){
             fprintf(list->files.visDump,
                     "\tnode%0.3lld [fontname=\"SF Pro\"; shape=Mrecord; style=filled; color=\"#01B5AE\" ;fillcolor=\"#C6F9F7\";label = \" { %0.3lld } | { data = %3.0lld } | { next = %lld } | { prev = %lld } \"];\n",
@@ -504,13 +506,19 @@ static int ListVerify(list_t* list){
 
     if (list->numElem > list->size) return OVERFLOW_ERR;
 
-    for (int64_t i = list->next[0], ctr = 0; i != 0 && ctr < list->numElem; i = list->next[i], ctr++){
+
+    int ctr = 0;
+    for (int64_t i = list->next[0] i != 0 && ctr < list->numElem + 5; i = list->next[i], ctr++){
         if (i != list->next[list->prev[i]]) return LINK_ERR;
     }
+    if (ctr >= list->numElem) return LINK_ERR;
 
-    for (int64_t i = list->prev[0], ctr = 0; i != 0 && ctr < list->numElem; i = list->prev[i], ctr++){
+    int ctr = 0;
+    for (int64_t i = list->prev[0]; i != 0 && ctr < list->numElem + 5; i = list->prev[i], ctr++){
         if (i != list->prev[list->next[i]]) return LINK_ERR;
     }
+
+    if (ctr >= list->numElem) return LINK_ERR;
 
     return OK;
 }
