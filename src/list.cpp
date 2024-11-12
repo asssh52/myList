@@ -506,19 +506,17 @@ static int ListVerify(list_t* list){
 
     if (list->numElem > list->size) return OVERFLOW_ERR;
 
-
     int ctr = 0;
-    for (int64_t i = list->next[0] i != 0 && ctr < list->numElem + 5; i = list->next[i], ctr++){
+    for (int64_t i = list->next[0]; i != 0 && ctr < list->numElem; i = list->next[i], ctr++){
         if (i != list->next[list->prev[i]]) return LINK_ERR;
     }
-    if (ctr >= list->numElem) return LINK_ERR;
 
-    int ctr = 0;
-    for (int64_t i = list->prev[0]; i != 0 && ctr < list->numElem + 5; i = list->prev[i], ctr++){
+    ctr = 0;
+    for (int64_t i = list->prev[0]; i != 0 && ctr < list->numElem; i = list->prev[i], ctr++){
         if (i != list->prev[list->next[i]]) return LINK_ERR;
     }
 
-    if (ctr >= list->numElem) return LINK_ERR;
+    if (ctr > list->numElem) return LINK_ERR;
 
     return OK;
 }

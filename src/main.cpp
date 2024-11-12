@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include "../hpp/list.hpp"
+#define MEOW fprintf(stderr, "\e[0;31m" "\nmeow\n" "\e[0m");
 
 int main(int argc, char* argv[]){
     list_t l = {};
@@ -60,8 +61,9 @@ int main(int argc, char* argv[]){
     printf(BGRN "%lu\n" RESET, meow);
     ListFindPos(&l, 40, &meow);
     printf(BGRN "%lu\n" RESET, meow);
-
+    MEOW
     HTMLDumpGenerate(&l);
+
 
     return 0;
 }
